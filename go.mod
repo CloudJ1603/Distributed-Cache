@@ -1,3 +1,3 @@
-module github.com/cloudj1603/Distribute-Cache
+module distributed_cache
 
 go 1.21.3
