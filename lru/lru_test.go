@@ -7,10 +7,52 @@ import (
 
 type String string
 
+// Value is a interface, need to implement its methpd
 func (d String) Len() int {
 	return len(d)
 }
 
+func TestAdd(t *testing.T) {
+	lru := New(int64(0), nil)
+	
+	// test add the first element
+	lru.Add("key1", String("1"))
+	if lru.nbytes != int64(len("key1") + len("1")) {
+		t.Fatal("expected 4 but got", lru.nbytes)
+	}
+
+	if v, ok := lru.Get("key1"); string(v.(String)) != "1" || !ok{
+		t.Fatal("cache hit key1=1 failed")
+	}
+	// test add the second element with the same key
+	lru.Add("key1", String("111"))
+	if lru.nbytes != int64(len("key1")+len("111")) {
+		t.Fatal("expected 6 but got", lru.nbytes)
+	}
+
+	if v, ok := lru.Get("key1"); string(v.(String)) != "111" || !ok{
+		t.Fatal("cache hit key1=111 failed")
+	}	
+	// test add the third element with a different key
+	lru.Add("key2", String("222"))
+	if lru.nbytes != int64(len("key1")+len("111") + len("key2") + len("222")) {
+		t.Fatal("expected 6 but got", lru.nbytes)
+	}
+
+	if v, ok := lru.Get("key2"); string(v.(String)) != "222" || !ok{
+		t.Fatal("cache hit key2=222 failed")
+	}	
+}
+
+/*
+	v.(String): 
+		This is a type assertion, it is attempting to assert that the value
+		stored in the cache, represented by 'v', is of the type 'String'.
+	string(v.(Strubg)): 
+		Assuming the type assertion is successful, this code converts the value
+		of type 'String' to a regular Go string
+			
+*/
 func TestGet(t *testing.T) {
 	lru := New(int64(0), nil)
 	lru.Add("key1", String("1234"))
@@ -31,8 +73,16 @@ func TestRemoveoldest(t *testing.T) {
 	lru.Add(k2, String(v2))
 	lru.Add(k3, String(v3))
 
+	if v, ok := lru.Get("key2"); !ok || string(v.(String)) != "value2" {
+		t.Fatal("Fail to store key2 and value2");
+	}
+
+	if v, ok := lru.Get("k3"); !ok || string(v.(String)) != "v3" {
+		t.Fatal("Fail to store k3 and v3");
+	}
+
 	if _, ok := lru.Get("key1"); ok || lru.Len() != 2 {
-		t.Fatalf("Removeoldest key1 failed")
+		t.Fatalf("Remove oldest key1 failed")
 	}
 }
 
@@ -54,12 +104,3 @@ func TestOnEvicted(t *testing.T) {
 	}
 }
 
-func TestAdd(t *testing.T) {
-	lru := New(int64(0), nil)
-	lru.Add("key", String("1"))
-	lru.Add("key", String("111"))
-
-	if lru.nbytes != int64(len("key")+len("111")) {
-		t.Fatal("expected 6 but got", lru.nbytes)
-	}
-}
