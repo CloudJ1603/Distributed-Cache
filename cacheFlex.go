@@ -1,11 +1,15 @@
 package distributed_cache
 
 import (
+	"fmt"
 	"sync"
+	"log"
 )
 
 /*
-	interface-based programming
+	The following three guys are used together to work as a callback function,
+	support retrieval of resource from different types of source
+	when resource are not found in cache
 */
 
 // A Getter loads data for a key.
@@ -21,11 +25,13 @@ func (f GetterFunc) Get(key string) ([]byte, error) {
 	return f(key)
 }
 
-// A Group is a cache namespace and associated data loaded spread over
+/*
+	A Group is a cache namespace and associated data loaded spread over
+*/
 type Group struct {
-	name      string
-	getter    Getter
-	mainCache cache
+	name      string        // a unique name
+	getter    Getter		// a callback function used to retrieve data in cache miss
+	mainCache cache			// a concurrent cache
 }
 
 // when use 'var', the variable's scope extends to the entire package
@@ -54,13 +60,50 @@ func NewGroup(name string, cacheBytes int64, getter Getter) *Group {
 
 // GetGroup returns the named group previously created with NewGroup, or
 // nil if there's no such group.
-/*
-	RLock() and RUnlock() provide shared access, allowing multiple goroutines to
-	read from the shared data concurrently while preventing writes during the read phase
-*/
+// RLock() and RUnlock() provide shared access, allowing multiple goroutines to
+// read from the shared data concurrently while preventing writes during the read phase
+
 func GetGroup(name string) *Group {
 	mu.RLock()
 	g := groups[name]
 	mu.RUnlock()
 	return g
+}
+
+// Get value for a key from cache
+func (g *Group) Get(key string) (ByteView, error) {
+	// empty key
+	if key =="" {
+		return ByteView{}, fmt.Errorf("key is required")
+	}
+
+	// key is found in the cache
+	if v, ok := g.mainCache.get(key); ok {
+		log.Println("[CacheFlex] hit")
+		return v, nil
+	}
+
+	// key is not found in the cahce
+	return g.load(key)
+}
+
+
+func (g *Group) load(key string) (ByteView, error) {
+	return g.getLocally(key);
+}
+
+// retrieve data from local source, and add it to the cache
+func (g *Group) getLocally(key string) (ByteView, error) {
+	bytes, err := g.getter.Get(key)
+	if err != nil {
+		return ByteView{}, err
+	}
+
+	value := ByteView{bytes: cloneBytes(bytes)}
+	g.populateCache(key, value)
+	return value, nil
+}
+
+func (g *Group) populateCache(key string, value ByteView) {
+	g.mainCache.add(key, value)
 }
