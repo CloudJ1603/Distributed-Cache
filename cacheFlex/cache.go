@@ -1,7 +1,7 @@
-package distributed_cache
+package cacheFlex
 
 import (
-	"distributed_cache/lru"
+	"distributed_cache/cacheFlex/lru"
 	"sync"
 )
 
