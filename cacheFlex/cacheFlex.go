@@ -2,8 +2,8 @@ package cacheFlex
 
 import (
 	"fmt"
-	"sync"
 	"log"
+	"sync"
 )
 
 /*
@@ -26,12 +26,13 @@ func (f GetterFunc) Get(key string) ([]byte, error) {
 }
 
 /*
-	A Group is a cache namespace and associated data loaded spread over
+A Group is a cache namespace and associated data loaded spread over
 */
 type Group struct {
-	name      string        // a unique name
-	getter    Getter		// a callback function used to retrieve data in cache miss
-	mainCache cache			// a concurrent cache
+	name      string // a unique name
+	getter    Getter // a callback function used to retrieve data in cache miss
+	mainCache cache  // a concurrent cache
+	peers     PeerPicker
 }
 
 // when use 'var', the variable's scope extends to the entire package
@@ -73,7 +74,7 @@ func GetGroup(name string) *Group {
 // Get value for a key from cache
 func (g *Group) Get(key string) (ByteView, error) {
 	// empty key
-	if key =="" {
+	if key == "" {
 		return ByteView{}, fmt.Errorf("key is required")
 	}
 
@@ -87,10 +88,9 @@ func (g *Group) Get(key string) (ByteView, error) {
 	return g.load(key)
 }
 
-
-func (g *Group) load(key string) (ByteView, error) {
-	return g.getLocally(key);
-}
+// func (g *Group) load(key string) (ByteView, error) {
+// 	return g.getLocally(key);
+// }
 
 // retrieve data from local source, and add it to the cache
 func (g *Group) getLocally(key string) (ByteView, error) {
@@ -106,4 +106,36 @@ func (g *Group) getLocally(key string) (ByteView, error) {
 
 func (g *Group) populateCache(key string, value ByteView) {
 	g.mainCache.add(key, value)
+}
+
+/*
+	------- day5 : Distributed Nodes --------------------
+*/
+// registers a PeerPicker for choosing remote peer
+func (g *Group) RegisterPeers(peers PeerPicker) {
+	if g.peers != nil {
+		panic("RegisterPeerPicker called more than once")
+	}
+	g.peers = peers
+}
+
+func (g *Group) load(key string) (value ByteView, err error) {
+	if g.peers != nil {
+		if peer, ok := g.peers.PickPeer(key); ok {
+			if value, err = g.getFromPeer(peer, key); err == nil {
+				return value, nil
+			}
+			log.Println("[GeeCache] Failed to get from peer", err)
+		}
+	}
+
+	return g.getLocally(key)
+}
+
+func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
+	bytes, err := peer.Get(g.name, key)
+	if err != nil {
+		return ByteView{}, err
+	}
+	return ByteView{bytes: bytes}, nil
 }

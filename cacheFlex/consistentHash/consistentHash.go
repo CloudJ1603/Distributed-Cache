@@ -13,7 +13,7 @@ type Hash func(data []byte) uint32
 type Map struct {
 	hash     Hash
 	replicas int
-	keys     []int // Sorted
+	keys     []int // the hash ring
 	hashMap  map[int]string
 }
 
