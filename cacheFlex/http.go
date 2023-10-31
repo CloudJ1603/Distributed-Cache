@@ -11,8 +11,7 @@ const defaultBasePath = "/_cacheFlex/"
 
 // HTTPPool implements PeerPicker for a pool of HTTP peers.
 type HTTPPool struct {
-	// this peer's base URL, e.g. "https://example.net:8000"
-	self     string
+	self     string // this peer's base URL, e.g. "https://example.net:8000"
 	basePath string
 }
 
@@ -24,7 +23,11 @@ func NewHTTPPool(self string) *HTTPPool {
 	}
 }
 
-// Log info with server name
+/*
+	v ...interface{} is a variadic parameter that allows you to pass a variable
+*/
+
+// Log info: server name + HTTP Method + URL path
 func (p *HTTPPool) Log(format string, v ...interface{}) {
 	log.Printf("[Server %s] %s", p.self, fmt.Sprintf(format, v...))
 }
@@ -59,4 +62,10 @@ func (p *HTTPPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Write(view.ByteSlice())
+
+	/*
+		In Go, if you do not explicitly write a "return" statement at the end
+		of a function, the function will still return when it reaches the end
+		of its execution.
+	*/
 }

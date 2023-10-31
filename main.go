@@ -1,24 +1,30 @@
 package main
 
 import (
-	"fmt"
 	"distributed_cache/cacheFlex"
+	"fmt"
 	"log"
 	"net/http"
 )
 
-type server int
-
-func (h *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.URL.Path)
-	w.Write([]byte("Hello World!"))
+var db = map[string]string{
+	"Tom":  "630",
+	"Jack": "589",
+	"Sam":  "567",
 }
 
 func main() {
-	var s server
-	// http.ListenAndServe("localhost:8080", &s)
-	if err := http.ListenAndServe("localhost:9999", &s); err != nil {
-		log.Fatal("Server error:", err)
-	}
+	cacheFlex.NewGroup("scores", 2<<10, cacheFlex.GetterFunc(
+		func(key string) ([]byte, error) {
+			log.Println("[SlowDB] search key", key)
+			if v, ok := db[key]; ok {
+				return []byte(v), nil
+			}
+			return nil, fmt.Errorf("%s not exist", key)
+		}))
 
+	addr := "localhost:9999"
+	peers := cacheFlex.NewHTTPPool(addr)
+	log.Println("cacheFlex is running at", addr)
+	log.Fatal(http.ListenAndServe(addr, peers))
 }

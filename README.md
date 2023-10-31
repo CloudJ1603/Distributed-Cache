@@ -10,12 +10,20 @@
 ## Directory
 ```bash
 Distributed-Cache/
-    |--lru/
-        |--lru.go  // 
-    |--byteview.go // 
-    |--cache.go    // concurrent access control
-    |--geecache.go // 
-    |--http.go
+    |--cacheFlex/
+        |--lru/
+            |--lru.go  
+            |--lru_test.go
+        |--byteview.go 
+        |--cache.go    
+        |--geecache.go 
+        |--http.go
+    |--go.mod
+    |--go.sum
+    |--main.go
+    |--README.md
+
+
 ```
 ## Test
 ```go
