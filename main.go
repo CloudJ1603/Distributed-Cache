@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"distributed_cache/cacheFlex"
 	"log"
 	"net/http"
 )
