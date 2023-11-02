@@ -17,8 +17,8 @@ func TestAdd(t *testing.T) {
 	
 	// test add the first element
 	lru.Add("key1", String("1"))
-	if lru.nbytes != int64(len("key1") + len("1")) {
-		t.Fatal("expected 4 but got", lru.nbytes)
+	if lru.currBytes != int64(len("key1") + len("1")) {
+		t.Fatal("expected 4 but got", lru.currBytes)
 	}
 
 	if v, ok := lru.Get("key1"); string(v.(String)) != "1" || !ok{
@@ -26,8 +26,8 @@ func TestAdd(t *testing.T) {
 	}
 	// test add the second element with the same key
 	lru.Add("key1", String("111"))
-	if lru.nbytes != int64(len("key1")+len("111")) {
-		t.Fatal("expected 6 but got", lru.nbytes)
+	if lru.currBytes != int64(len("key1")+len("111")) {
+		t.Fatal("expected 6 but got", lru.currBytes)
 	}
 
 	if v, ok := lru.Get("key1"); string(v.(String)) != "111" || !ok{
@@ -35,8 +35,8 @@ func TestAdd(t *testing.T) {
 	}	
 	// test add the third element with a different key
 	lru.Add("key2", String("222"))
-	if lru.nbytes != int64(len("key1")+len("111") + len("key2") + len("222")) {
-		t.Fatal("expected 6 but got", lru.nbytes)
+	if lru.currBytes != int64(len("key1")+len("111") + len("key2") + len("222")) {
+		t.Fatal("expected 6 but got", lru.currBytes)
 	}
 
 	if v, ok := lru.Get("key2"); string(v.(String)) != "222" || !ok{
