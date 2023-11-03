@@ -7,9 +7,15 @@ import (
 )
 
 /*
+											 Yes
+	get key --> check if it is in the cache -----> return the cached value
+
+
+*/
+
+/*
 	The following three guys are used together to work as a callback function,
-	support retrieval of resource from different types of source
-	when resource are not found in cache
+	support retrieval of resource from different types of source when resource are not found in cache
 */
 
 // A Getter loads data for a key.
@@ -25,9 +31,6 @@ func (f GetterFunc) Get(key string) ([]byte, error) {
 	return f(key)
 }
 
-/*
-A Group is a cache namespace and associated data loaded spread over
-*/
 type Group struct {
 	name      string // a unique name
 	getter    Getter // a callback function used to retrieve data in cache miss
@@ -41,7 +44,7 @@ var (
 	groups = make(map[string]*Group)
 )
 
-// NewGroup create a new instance of Group and return its pointer
+// instantiate a new instance of Group and return its pointer
 func NewGroup(name string, cacheBytes int64, getter Getter) *Group {
 	if getter == nil {
 		panic("nil Getter")
@@ -59,8 +62,7 @@ func NewGroup(name string, cacheBytes int64, getter Getter) *Group {
 	return g
 }
 
-// GetGroup returns the named group previously created with NewGroup, or
-// nil if there's no such group.
+// returns the named group previously created with NewGroup, or nil if there's no such group.
 // RLock() and RUnlock() provide shared access, allowing multiple goroutines to
 // read from the shared data concurrently while preventing writes during the read phase
 
@@ -71,7 +73,10 @@ func GetGroup(name string) *Group {
 	return g
 }
 
-// Get value for a key from cache
+// look for key in the mainCache
+// if the key is found in the cache, return its value
+// else if the key is not found in the cache, call load to
+// retrieve data from local source or from peer
 func (g *Group) Get(key string) (ByteView, error) {
 	// empty key
 	if key == "" {
@@ -92,6 +97,19 @@ func (g *Group) Get(key string) (ByteView, error) {
 // 	return g.getLocally(key);
 // }
 
+func (g *Group) load(key string) (value ByteView, err error) {
+	if g.peers != nil {
+		if peer, ok := g.peers.PickPeer(key); ok {
+			if value, err = g.getFromPeer(peer, key); err == nil {
+				return value, nil
+			}
+			log.Println("[cacheFlex] Failed to get from peer", err)
+		}
+	}
+
+	return g.getLocally(key)
+}
+
 // retrieve data from local source, and add it to the cache
 func (g *Group) getLocally(key string) (ByteView, error) {
 	bytes, err := g.getter.Get(key)
@@ -111,25 +129,13 @@ func (g *Group) populateCache(key string, value ByteView) {
 /*
 	------- day5 : Distributed Nodes --------------------
 */
+
 // registers a PeerPicker for choosing remote peer
 func (g *Group) RegisterPeers(peers PeerPicker) {
 	if g.peers != nil {
 		panic("RegisterPeerPicker called more than once")
 	}
 	g.peers = peers
-}
-
-func (g *Group) load(key string) (value ByteView, err error) {
-	if g.peers != nil {
-		if peer, ok := g.peers.PickPeer(key); ok {
-			if value, err = g.getFromPeer(peer, key); err == nil {
-				return value, nil
-			}
-			log.Println("[cacheFlex] Failed to get from peer", err)
-		}
-	}
-
-	return g.getLocally(key)
 }
 
 func (g *Group) getFromPeer(peer PeerGetter, key string) (ByteView, error) {
